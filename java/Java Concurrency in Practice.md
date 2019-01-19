@@ -94,7 +94,7 @@ Interruption rule. A thread calling interrupt on another thread happens-before t
 &nbsp;
 Finalizer rule. The end of a constructor for an object happens-before the start of the finalizer for that object
 &nbsp;
-Transitivity. If A happens-before B, and B happens-before C, then A happens-before C
+Transitivity. If A happens-before B, and B happens-before C, then A happens-before C**
 
 > 在多线程访问共享数据时, 至少有一条线程执行写入操作时, 如果读操作和写操作之间没有Happen-Before关系, 那么就会存在数据竞争问题.
 
