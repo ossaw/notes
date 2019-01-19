@@ -29,7 +29,7 @@
 &nbsp;
 3. 处理器本地缓存可能会改变将写入变量提交到主内存的次序, 而且保存在处理器本地缓存中的值对于其他处理器是不可见的
 
-```
+```java
 // 程序清单16-1
 public class PossibleReordering {
     private static int x = 0, y = 0;
