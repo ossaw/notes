@@ -62,9 +62,9 @@ public class PossibleReordering {
 
 ** Happen-Before规则如下: **
 &nbsp;
-**1. 程序顺序规则: 如果程序中操作A在操作B之前, 那么在线程中A操作将在B操作之前发生**
+** 1. 程序顺序规则: 如果程序中操作A在操作B之前, 那么在线程中A操作将在B操作之前发生 **
 &nbsp;
-**2. 监视器规则: 在监视器锁上的解锁操作必须在同一件监视器上的加锁操作之前发生**
+** 2. 监视器规则: 在监视器锁上的解锁操作必须在同一件监视器上的加锁操作之前发生 **
 &nbsp;
 ** 3. volatile变量规则: 对volatile变量的写操作必须在对此变量的读操作之前执行 **
 &nbsp;
@@ -97,7 +97,7 @@ public class PossibleReordering {
 ** 8. Transitivity. If A happens-before B, and B happens-before C, then A happens-before C **
 
 > 在多线程访问共享数据时, 至少有一条线程执行写入操作时, 如果读操作和写操作之间没有Happen-Before关系, 那么就会存在数据竞争问题.
-&nbsp;
+
 > 程序不满足Happen-Before的情况下, 要对程序进行修改以使它满足此规则, 在多线程环境中或是使用synchronize, 或是使用volatile, 在单线程环境中, 调整程序代码顺序满足, 总之Happen-Before原则不必全部满足, 但是也不可以一条原则都不满足
 
 #### 16.1.4 借助同步
