@@ -56,4 +56,4 @@ public class PossibleReordering {
 ```
 
 经验证上述程序会打印出(0, 0), 如果不出现重排序的情况, 是不会出现这种结果, 程序运行时序可能如下:
-![Alt text](https://github.com/ossaw/notes/pictures/thread-master/image/threadpool.jpg?raw=true)
+![Alt text](https://github.com/ossaw/notes/blob/master/pictures/java%20concurrency%20in%20practice%2016-1.jpg?raw=true)
