@@ -77,7 +77,9 @@ Happen-Before规则如下:
 7. 终结器规则: 对象的构造函数必须在启动该对象的终结器之前执行
 &nbsp;
 8. 传递性: 如果操作A在操作B之前执行, 操作B在操作C之前执行, 那么操作A在操作C之前执行
-&nbsp;
+
+***
+
 The rules for happens-before are:
 &nbsp;
 1. Program order rule. Each action in a thread happens-before every action in that thread that comes later in the program order
