@@ -690,31 +690,120 @@ class Department {
 
 ### 7.6 Remove Middle Man (移除中间人)
 
-某个类做了过多的简单委托动作.
-
-思路: 让客户直接调用受托类.(和7.5刚好相反)
+1. 某个类做了过多的简单委托动作, 让客户直接调用受托类.(和7.5刚好相反)
 
 ### 7.7 Introduce Foreign Method (引入外加函数)
 
-你需要为提供服务的类增加一个函数，但你无法修改这个类.
+1. 你需要为提供服务的类增加一个函数, 但你无法修改这个类, 在客户类中建立一个函数，并以第一参数形式传入一个服务类实例.
 
-思路: 在客户类中建立一个函数，并以第一参数形式传入一个服务类实例.
+2. 如果你发现为一个类添加了大量外加函数, 或者发现有许多类都需要同样的外加函数, 使用Introduce Local Extension, 也就是工具类.
+
+3. 这个函数不应该调用客户类的任何特性, 如果它需要一个值, 把该值当作参数来传递给它
+
+4. 可将函数注释为外加函数, 一遍将来有机会将其搬移到服务类中.
+
+```java
+// 重构前
+Date newDate = new Date(previouseEnd.getYear(),
+		previouseEnd.getMonth(), previouseEnd.getDay() + 1);
+
+// 重构后
+static Date nextDate(Date previouseEnd) {
+	return new Date(previouseEnd.getYear(), previouseEnd.getMonth(),
+			previouseEnd.getDay() + 1);
+}
+```
 
 ### 7.8 Introduce Local Extension (引入本地扩展)
 
-你需要为服务类提供一些额外函数，但你无法修改这个类.
+1. 你需要为服务类提供一些额外函数, 但你无法修改这个类, 建立一个新类，使它包含这些额外函数.让这个扩展品成为源类的子类或包装类.
 
-思路: 建立一个新类，使它包含这些额外函数.让这个扩展品成为源类的子类或包装类.
+2. 使用此手法可将Introduce Foreign Method生成的过多函数组织到一起, 便于管理.
+
+3. 引入本地扩展有两种方式, 使用继承或者组合.
+
+4. 使用继承打破封装性, 但是可以直接增加新功能. 使用组合不会存在打破封装的行为, 但是需要为原始类的所有函数提供委托函数, 建议原始类中函数过多使用继承扩展, 否则使用组合来扩展新类.
+
+```java
+// 使用继承
+class MyDate extends Date {
+    public MyDate(String s) {
+        super(s);
+    }
+
+    // 增加功能
+    public Date nextDate() {
+        return new Date(getYear(), getMonth(), getDay() + 1);
+    }
+}
+
+// 使用组合也考虑继承Date, 便于委托Date中
+class MyDate1 extends Date {
+    private Date date;
+
+    public MyDate1(Date date) {
+        this.date = date;
+    }
+
+    // 其它委托方法不一一列出
+    @Override
+    public int getYear() {
+        return date.getYear();
+    }
+
+    public Date nextDate() {
+        return new Date(getYear(), getMonth(), getDay());
+    }
+}
+```
 
 ## 第8章 重新组织数据
 
 ### 8.1 Self Encapsulate Filed (自封装字段)
-将属性声明为private，使用get/set函数来访问.
+
+1. 你直接访问一个字段, 但是与字段之间的耦合关系变得笨拙, 降低字段访问权限, 为这个字段建立取值/设值函数, 并且只以这些函数来访问这些字段.
+
+2. 间接访问变量的好处是, 子类可以通过覆写取值/设值函数来改变获取数据的途径, 而且还支持延迟初始化.
+
+3. 直接访问变量的好处是代码易于阅读.
+
+4. 注意不要再构造函数中使用设值函数
+
+```java
+// 重构前
+private int lower, high;
+
+boolean includes(int arg) {
+	return arg >= lower && arg <= high;
+}
+
+// 重构后
+public void setLower(int lower) {
+	this.lower = lower;
+}
+
+public int getLower() {
+	return lower;
+}
+
+public void setHigh(int high) {
+	this.high = high;
+}
+
+public int getHigh() {
+	return high;
+}
+
+boolean includes(int arg) {
+	return arg >= getLower() && arg <= getHigh();
+}
+```
+
 ### 8.2 Replace Data Value with Object (以对象取代数据值)
 
-你有一个数据项，需要与其他数据和行为一起使用才有意义.
+1. 你有一个数据项，需要与其他数据和行为一起使用才有意义. 将数据项变成对象.
 
-思路: 将数据项变成对象.
+2. 
 
 ### 8.3 Change Value to Reference (将值对象改为引用对象)
 
@@ -746,8 +835,6 @@ class Department {
 
 思路: 添加一个反向指针，并使修改函数能够同时更新两条连接.
 
-
-
 ### 8.8 Change Bidirectional Association to Unidirectional (将双向关联改为单向关联)
 
 两个类之间有双向关联，但其中一个类如今不再需要另一个类的特性.
@@ -756,17 +843,45 @@ class Department {
 
 ### 8.9 Replace Magic Number with Symbolic Constant (以字面常量取代魔法数)
 
-你有一个字面数值，带有特别含义.
+1. 你有一个字面数值，带有特别含义, 创造一个常量，根据其意义为它命名，并将上述的字面数值替换为这个常量.
 
-思路: 创造一个常量，根据其意义为它命名，并将上述的字面数值替换为这个常量.
+2. 可将常量提取到常量类中.
 
-eg. 使用PI来代替3.14
+```java
+// 重构前
+double protentialEnergy(double mass, double height) {
+	return mass * 9.81D * height;
+}
+
+// 重构后
+private static final double FRAVITATIONAL_CONSTANT = 9.81D;
+
+double protentialEnergy(double mass, double height) {
+	return mass * FRAVITATIONAL_CONSTANT * height;
+}
+```
 
 ### 8.10 Encapsulate Field （封装字段）
 
-你的类中存在一个 public 字段.
+1. 你的类中存在一个 public 字段, 将它声明为 private, 并提供相应的访问函数.
 
-思路: 将它声明为 private， 并提供相应的访问函数.
+2. 除常量类外, 尽量避免在类中声明public字段.
+
+```java
+// 重构前
+public String name;
+
+// 重构后
+private String name;
+
+public void setName(String name) {
+	this.name = name;
+}
+
+public String getName() {
+	return name;
+}
+```
 
 ### 8.11 Encapsulate Collection (封装集合)
 
@@ -786,9 +901,7 @@ eg. 使用PI来代替3.14
 
 ### 8.12 Replace Record with Data Class (以数据类取代记录)
 
-你需要面对传统编程环境中的记录结构.
-
-思路: **为该记录创建一个"哑"数据对象**.
+1. 你需要面对传统编程环境中的记录结构, 为该记录创建一个"哑"数据对象.
 
 ### 8.13 Replace Type Code with Class (以类取代类型码)
 
