@@ -103,3 +103,84 @@ The rules for happens-before are:
 > 程序不满足Happen-Before的情况下, 要对程序进行修改以使它满足此规则, 在多线程环境中或是使用synchronize, 或是使用volatile, 在单线程环境中, 调整程序代码顺序满足, 总之Happen-Before原则不必全部满足, 但是也不可以一条原则都不满足
 
 #### 16.1.4 借助同步
+
+1. 通过现有Happen-Before规则, 可以借助现有同步机制来实现可见性属性. (个人理解: 在无锁的场景下实现内存可见性)
+
+```java
+/**
+ * 这段程序是如何保证共享变量sharedVariable的内存可见性?
+ */
+public class ReentrantLockMemoryVisibilityTest implements Runnable {
+    private final ReentrantLock lock = new ReentrantLock();
+    private int sharedVariable = 0;
+
+    public int getSharedVariable() {
+        return sharedVariable;
+    }
+
+    @Override
+    public void run() {
+        updateSharedVariable();
+    }
+
+    public void updateSharedVariable() {
+        // 引入局部变量lock, 可以提升性能, 具体参见effective java第三版83条目
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            System.out.println(++sharedVariable);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        final ExecutorService exec = Executors.newCachedThreadPool();
+        final ReentrantLockMemoryVisibilityTest reentrantLockMemoryVisibilityTest = 
+				new ReentrantLockMemoryVisibilityTest();
+        for (int i = 0; i < 10; i++)
+            exec.execute(reentrantLockMemoryVisibilityTest);
+        exec.shutdown();
+
+        SECONDS.sleep(1);
+        System.out.println("final: " + reentrantLockMemoryVisibilityTest.getSharedVariable());
+    }
+}
+```
+
+jdk1.5推出ReentrantLock显式锁, 可以达到内置锁synchronize相同的内存语义和独占访问. 也就是说以上例子sharedVariable的可见性是由ReentrantLock保证, 可通过ReentrantLock源码分析得知是如何保证的内存可见性.
+
+这点根据Happen-Before原则就可推断 :
+
+```java
+// ReetrantLock.lock()部分代码
+protected final boolean tryAcquire(int acquires) {
+	// 1. 局部变量, 线程之间不共享
+	final Thread current = Thread.currentThread();
+	// 2. 读取volatile state值, 此值代表线程持有当前锁的数量(由于可重入的原因)
+	int c = getState();
+	// 3. 后序其它操作, 包括对共享变量的操作
+}
+
+// ReetrantLock.unlock()部分代码
+protected final boolean tryRelease(int releases) {
+	// 4. setState之前的操作, 包括对共享变量的操作
+	// 5. 写入volatile state值
+	setState(c);
+	return free;
+}
+```
+
+程序中对sharedVariable的修改修改在lock与unlock之间, 也就是步骤3到步骤4之间
+
+目前的问题是在线程1在unlock之后, 在线程2执行lock之前是如何保证读取到的sharedVariable是最新值.
+
+1. 线程1修改完共享变量执行unlock操作, 根据程序次序规则, 步骤4Happen-Before步骤5, 步骤5**执行setState(对volatile值的写入操作)**, 此时sharedVariable的可见性可以保持.
+
+2. 线程1释放完全释放锁之后, 线程2执行了lock操作, **先执行getState(对volatile值的读取操作)**, 此处存在一个Happen-Before关系, **线程2对volatile state的写操作是Happen-Before线程1对volatile state读操作的**, 根据volatile变量原则, 此处的内存可见性也是可以维持的.
+
+3. 综上所述: 线程1执行步骤4Happen-Before线程1执行步骤5, 线程1执行步骤5Happen-Before线程2执行步骤2, 线程2执行步骤2Happen-Before线程执行步骤3, 根据传递性线程1执行步骤4Happen-Before线程2执行步骤3, 所以线程1在步骤4中对共享变量的修改对线程2执行步骤3时是可见的.
+
+4. 整个流程是在单线程内通过**程序次序规则**保证Happen-Before关系, 线程之间采用**volatile变量规则**来保证Happen-Before关系, 最后采用**传递性来保证线程之间的Happen-Before关系, 所以最终内存可见性得以维持.
+
+5. 这是一种在无锁定的情况下实现的内存可见性, 这种程序及其脆弱, 它严重依赖于代码中的执行顺序和类的规范中天然存在的一种Happen-Before关系, 试想一下, 上述程序中步骤4和步骤5代码位置交换或者步骤2和步骤3的代码位置交换, 内存可见性都不会得以维持, 因为他破坏了程序次序规则, 此时再根据第3条推断就会失败. 再或者ReentrantLock的类规范没有保证线程执行unlock操作Happen-Before其它线程执行lock之前, 内存可见性也无法维持, 因为它破坏了volatile变量规则.
