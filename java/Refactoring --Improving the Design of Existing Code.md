@@ -75,7 +75,7 @@ tips:
 
 6. 提取函数后可适当运用Substitute Algorithm引入新算法
 
-```
+```java
 // 重构前
 void printOwing() {
 	double amount = 0.0D;
@@ -129,7 +129,7 @@ void printBanner() {
 
 5. 如果内联的函数过于复杂, 就不要动.
 
-```
+```java
 // 重构前
 int getRating() {
 	return moreThanFiveLateDeliveries() ? 0 : 1;
@@ -150,7 +150,7 @@ int getRating() {
 
 2. 如果对临时变量赋值的表达式计算量较大, 可适当不进行此手法.
 
-```
+```java
 // 重构前
 double basePrice = anOrder.basePrice();
 return basePrice > 1000;
@@ -167,7 +167,7 @@ return anOrder.basePrice() > 1000;
 
 3. 如果被取代的临时变量在函数中被多次赋值, 可能需要Split Temporary Variable 或者 Separate Query form Modify手法先简化一下临时变量, 然后再替换.
 
-```
+```java
 // 重构前
 double getPrice() {
 	double basePrice = quantity * itemPrice;
@@ -202,7 +202,7 @@ double basePrice() {
 
 2. 此手法便于理解代码, 但是引入过多临时变量, 不利于后序Extract Method的使用, 运用此手法之前可优先尝试Extract Method手法, 相比之下引入解释性变量局限性较大, 当局部变量过多难以进行Extract Method时, 可使用此手法.
 
-```
+```java
 // 重构前
 double price() {
 	return quantity * itemPrice - 
@@ -243,7 +243,7 @@ private double basePrice() {
 
 2. 此手法可解决变量被多次赋值, 意义不明确的问题, 通常在运用Replace Temp with Query之前会用此手法来分解临时变量.
 
-```
+```java
 // 重构前
 void getPerimeterAndArea(double width, double height) {
 	double temp = 2 * (width + height);
@@ -283,7 +283,7 @@ void getPerimeterAndArea(double width, double height) {
 
 9. 个人认为java中对参数赋值, 而不将计算结果返回去, 说明代码逻辑存在问题, 而Remove Assignments to Parameters也只不过是使代码清晰度增高而已, 未从根本上解决问题, 该代码若未被过多调用, 完全重构它.
 
-```
+```java
 // 重构前
 double discount(int inputVal, int quantity, int yearToDate) {
 	if (inputVal > 50)
@@ -326,7 +326,7 @@ double discount(int inputVal, int quantity, int yearToDate) {
 
 这项重构的好处是: 我们可以轻松地对compute()函数采取Extract Method(提炼函数)，不必担心参数传递的问题.
 
-```
+```java
 // 重构前
 class Account {
     int gamma(int inputVal, int quantity, int yearToData) {
@@ -395,7 +395,7 @@ class Account {
 
 2. 在替换之前先保证自己是否充分了解被替换的算法, 若算法过大, 可先行拆解, 增加清晰度.
 
-```
+```java
 // 重构前
 String foundPerson(String[] peoples) {
 	for (String person : peoples) {
@@ -425,34 +425,270 @@ String foundPerson1(String[] peoples) {
 
 ### 7.1 Move Method (搬移函数)
 
-你的程序中，**有个函数**与其所驻类之外的另一个类进行更多交流: 调用后者，或者被后者调用.
+1. 你的程序中，**有个函数**与其所驻类之外的另一个类进行更多交流: 调用后者，或者被后者调用. 在该函数最常引用的类中建立一个有着类似行为新函数, 将旧函数变成一个委托函数, 或者将旧函数完全移除.
 
-思路: 
-在该函数最常引用的类中建立一个有着类似行为的新函数.将旧函数变成一个单纯的委托函数，或是将旧函数完全移除.
+2. 迁移过程中考虑多态的情况和访问权限的问题, 若果迁移方法被引用过多, 将旧函数变成委托函数, 否则将其完全移除.
+
+```java
+// 重构前
+private AccountType type;
+private double daysOverdrawn;
+
+double overdraftCharge() {
+	if (type.isPremium()) {
+		double result = 10.0D;
+		if (daysOverdrawn > 7)
+			result += (daysOverdrawn - 7) * 0.85D;
+		return result;
+	} else
+		return daysOverdrawn * 1.75D;
+}
+
+private double bankCharge() {
+	double result = 4.5D;
+	if (daysOverdrawn > 0)
+		result += overdraftCharge();
+	return result;
+}
+
+// 重构后
+private AccountType type;
+private double daysOverdrawn;
+
+private double bankCharge() {
+	double result = 4.5D;
+	if (daysOverdrawn > 0)
+		result += type.overdraftCharge(daysOverdrawn);
+	return result;
+}
+
+private static class AccountType {
+	public boolean isPremium() {
+		return false;
+	}
+
+	double overdraftCharge(double daysOverdrawn) {
+		if (isPremium()) {
+			double result = 10.0D;
+			if (daysOverdrawn > 7)
+				result += (daysOverdrawn - 7) * 0.85D;
+			return result;
+		} else
+			return daysOverdrawn * 1.75D;
+	}
+}
+```
 
 ### 7.2 Move Field （搬移字段）
 
-你的程序中，**某个字段**被其所驻类之外的另一个类更多地用到.
+1. 你的程序中, 某个字段被其所驻类之外的另一个类更多地用到. 在目标类新建一个字段，修改源字段的所有用户，令它们改用新字段.
 
-思路: 在目标类新建一个字段，修改源字段的所有用户，令它们改用新字段.
+2. 如果被搬移字段是public的, 先使用Encapsulate Field将它封装起来.
+
+3. 检查是否有现成的字段或函数可以获取搬移目标对象, 如果没有, 建立一个这样的函数, 如果还不行, 在源类中建立一个目标类的引用.
+
+```java
+// 重构前
+public class Account {
+    private double interedtedRate;
+
+    double interedtedForAmountDays(double amount, int days) {
+        return interedtedRate * amount * days / 365;
+
+    }
+}
+
+class AccountType {}
+
+// 重构后
+public class Account {
+    private AccountType type;
+
+    double interedtedForAmountDays(double amount, int days) {
+        return type.getInteredtedRate() * amount * days / 365;
+
+    }
+}
+
+class AccountType {
+    private double interedtedRate;
+
+    public void setInteredtedRate(double interedtedRate) {
+        this.interedtedRate = interedtedRate;
+    }
+
+    public double getInteredtedRate() {
+        return interedtedRate;
+    }
+}
+```
 
 ### 7.3 Extract Class (提炼类)
 
-某各类做了应该由两个类做的事.
+> 此条目未做完笔记, 详情查阅书籍
 
-思路: 建立一个新类，将相关的字段和函数从旧类搬移到新类.
+1. 某各类做了应该由两个类做的事, 建立一个新类，将相关的字段和函数从旧类搬移到新类.
+
+2. 新提炼的类名一定要明确表达它所做的事情, 提炼类的过程中使用Move Method和Move Field进行搬移.
+
+3. 使用Move Method过程中, 先搬移底层函数(被其它函数调用多余调用其它函数的), 在搬移高层函数.
+
+4. 新提取的类根据实际情况决定是否公开访问权限, 是采取包内访问还是嵌套类.
+
+```java
+// 重构前
+class Person {
+    private String name;
+    private int areaCode;
+    private int phoneNumber;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAreaCode() {
+        return areaCode;
+    }
+
+    public void setAreaCode(int areaCode) {
+        this.areaCode = areaCode;
+    }
+
+    public int getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(int phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+}
+
+// 重构后
+class Person {
+    private String name;
+    private TelephoneNumber telephoneNumber;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public TelephoneNumber getTelephoneNumber() {
+        return telephoneNumber;
+    }
+
+    public void setTelephoneNumber(TelephoneNumber telephoneNumber) {
+        this.telephoneNumber = telephoneNumber;
+    }
+
+    public int getAreaCode() {
+        return telephoneNumber.getAreaCode();
+    }
+
+    public void setAreaCode(int areaCode) {
+        telephoneNumber.setAreaCode(areaCode);
+    }
+
+    public int getPhoneNumber() {
+        return telephoneNumber.getPhoneNumber();
+    }
+
+    public void setPhoneNumber(int phoneNumber) {
+        telephoneNumber.setPhoneNumber(phoneNumber);
+    }
+}
+
+class TelephoneNumber {
+    private int areaCode;
+    private int phoneNumber;
+
+    public int getAreaCode() {
+        return areaCode;
+    }
+
+    public void setAreaCode(int areaCode) {
+        this.areaCode = areaCode;
+    }
+
+    public int getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(int phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+}
+```
 
 ### 7.4 Inline Class (将类内联化)
 
-某个类没有做太多事情.
+1. 某个类没有做太多事情. 将这个类的所有特性搬移到另一个类中，然后移除源类.
 
-思路: 将这个类的所有特性搬移到另一个类中，然后移除原类.
+2. 如果目标类访问权限只在源类内部, 如private嵌套类, 可放心内联, 如果目标类访问权限过大, 可先修改类名, 让编译器替我们检查目标类被引用的地方.
 
 ### 7.5 Hide Delegate (隐藏"委托关系")
 
-客户通过一个委托类来调用另一个对象.
+1. 客户通过一个委托类来调用另一个对象. 在服务类上建立客户所需求的所有函数，用以隐藏委托关系.
 
-思路: 在服务类上建立客户所需求的所有函数，用以隐藏委托关系.
+2. 增强封装, 最少知道原则.
+
+3. 在委托关系过少的情况下可以使用此手法, 如果委托关系过多, 使用Remove Middle Man.
+
+```java
+// 重构前
+class Person {
+    private Department department;
+
+    public Department getDepartment() {
+        return department;
+    }
+}
+
+class Department {
+    private final String manager;
+
+    public Department(String manager) {
+        this.manager = manager;
+    }
+
+    public String getManager() {
+        return manager;
+    }
+}
+
+// 重构后, Department对象对客户端隐藏, 只暴露需要的信息, 如果暴露的信息过多, 考虑直接暴露Department对象.
+class Person {
+    private Department department;
+
+    public void setDepartment(Department department) {
+        this.department = department;
+    }
+
+    public String getManager() {
+        return department.getManager();
+    }
+}
+
+class Department {
+    private final String manager;
+
+    public Department(String manager) {
+        this.manager = manager;
+    }
+
+    public String getManager() {
+        return manager;
+    }
+}
+```
 
 ### 7.6 Remove Middle Man (移除中间人)
 
