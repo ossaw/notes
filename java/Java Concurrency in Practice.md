@@ -177,10 +177,12 @@ protected final boolean tryRelease(int releases) {
 
 1. 线程1修改完共享变量执行unlock操作, 根据程序次序规则, 步骤4Happen-Before步骤5, 步骤5**执行setState(对volatile值的写入操作)**, 此时sharedVariable的可见性可以保持.
 
-2. 线程1释放完全释放锁之后, 线程2执行了lock操作, **先执行getState(对volatile值的读取操作)**, 此处存在一个Happen-Before关系, **线程2对volatile state的写操作是Happen-Before线程1对volatile state读操作的**, 根据volatile变量原则, 此处的内存可见性也是可以维持的.
+2. 线程1释放完全释放锁之后, 线程2执行了lock操作, **先执行getState(对volatile值的读取操作)**, 此处存在一个Happen-Before关系, **线程2对volatile state的写操作是Happen-Before线程1对volatile state读操作的**, 根据volatile变量原则, 此处的内存可见性也是可以维持的. (这种Happen-Before关系是由ReentrantLock的类规范提供的, 即线程执行unlock操作Happen-Before其它线程执行lock操作, 在线程lock时getState=0的情况下除外)
 
 3. 综上所述: 线程1执行步骤4Happen-Before线程1执行步骤5, 线程1执行步骤5Happen-Before线程2执行步骤2, 线程2执行步骤2Happen-Before线程执行步骤3, 根据传递性线程1执行步骤4Happen-Before线程2执行步骤3, 所以线程1在步骤4中对共享变量的修改对线程2执行步骤3时是可见的.
 
-4. 整个流程是在单线程内通过**程序次序规则**保证Happen-Before关系, 线程之间采用**volatile变量规则**来保证Happen-Before关系, 最后采用**传递性来保证线程之间的Happen-Before关系, 所以最终内存可见性得以维持.
+4. 整个流程是在单线程内通过**程序次序规则**保证Happen-Before关系, 线程之间采用**volatile变量规则**来保证Happen-Before关系, 最后采用**传递性**来保证线程之间的Happen-Before关系, 所以最终内存可见性得以维持.
 
 5. 这是一种在无锁定的情况下实现的内存可见性, 这种程序及其脆弱, 它严重依赖于代码中的执行顺序和类的规范中天然存在的一种Happen-Before关系, 试想一下, 上述程序中步骤4和步骤5代码位置交换或者步骤2和步骤3的代码位置交换, 内存可见性都不会得以维持, 因为他破坏了程序次序规则, 此时再根据第3条推断就会失败. 再或者ReentrantLock的类规范没有保证线程执行unlock操作Happen-Before其它线程执行lock之前, 内存可见性也无法维持, 因为它破坏了volatile变量规则.
+
+6. 借助同步的小技巧: tryAcquire中读取volatile变量的操作在第一行, 方法tryRelease中写入同一volatile变量的操作在最后一行, 且必须保证tryRelease在tryAcquire之前执行, 其中方法内局部变量可随意安放位置, 因为它们不是线程之间共享的, 比如tryAcquire中的步骤1在getState之前声明, tryRelease中的return free;在setState之后返回, 这都不影响.
