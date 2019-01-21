@@ -803,25 +803,92 @@ boolean includes(int arg) {
 
 1. 你有一个数据项，需要与其他数据和行为一起使用才有意义. 将数据项变成对象.
 
-2. 
+2. 值对象应该是不可修改内容的, 这可以避免一些别名问题.
+
+```java
+// 重构前
+class Order {
+    private String name;
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// 重构后
+class Order {
+    private Customer customer;
+
+    public void setName(String customerName) {
+        this.customer = new Customer(customerName);
+    }
+
+    public String getCustomerName() {
+        return customer.getName();
+    }
+}
+
+class Customer {
+    private final String name;
+
+    public Customer(String name) {
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+```
 
 ### 8.3 Change Value to Reference (将值对象改为引用对象)
 
-你从一个类衍生出许多彼此相等的实例，希望将它们替换为同一个对象.
-
-思路: 将这个值对象变成引用对象.
+1. 你从一个类衍生出许多彼此相等的实例，希望将它们替换为同一个对象, 将这个值对象变成引用对象.
 
 ### 8.4 Change Reference to Value (将引用对象改为值对象)
 
-你有一个引用对象，很小且不可变，而且不易管理.
-
-思路: 将它变成值对象.
+1. 你有一个引用对象，很小且不可变，而且不易管理, 将它变成值对象.
 
 ### 8.5 Replace Array with Object (以对象取代数组)
 
-你有一个数组，其中的元素各自代表不同的东西.
+1. 你有一个数组，其中的元素各自代表不同的东西, 以对象替换数组，其中的数组中的每个元素，以一个字段来表示, 数组应该用于容纳一组有序的相似的对象.
 
-思路: 以对象替换数组，其中的数组中的每个元素，以一个字段来表示.
+```java
+// 重构前
+String[] persion = new String[2];
+persion[0] = "Tom";
+persion[1] = "20";
+
+// 重构后
+Person person = new Person();
+person.setName("Tom");
+person.setAge(20);
+
+class Person {
+    private String name;
+    private int age;
+
+    public String getName() {
+        return name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+}
+```
 
 ### 8.6 Duplicate Observed Data (复制"被监视数据")
 
@@ -863,9 +930,13 @@ double protentialEnergy(double mass, double height) {
 
 ### 8.10 Encapsulate Field （封装字段）
 
-1. 你的类中存在一个 public 字段, 将它声明为 private, 并提供相应的访问函数.
+1. 你的类中存在一个 public 字段, 将它声明为private, 并提供相应的访问函数.
 
 2. 除常量类外, 尽量避免在类中声明public字段.
+
+3. 如果客户端修改了该字段, 将此引用点替换为设值函数的调用, 如果客户端读取了该字段, 将此引用点替换为取值函数的调用
+
+4. 如果这个字段是各对象, 而客户端只不过是调用该对象的函数, 那么该函数是否改变对象的状态, 都只能算是读取该字段, 只有客户端为该字段重新赋值时, 才能将其替换为设值函数.
 
 ```java
 // 重构前
