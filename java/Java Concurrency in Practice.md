@@ -46,7 +46,7 @@
 > 构建稳健的并发程序必须正确使用线程和锁, 其核心在于对状态访问操作进行管理, 特别是共享的和可变的状态的访问.
 > 共享意味着可以有多个线程同时访问(通常是对象实例域, 静态域), 可变意味着变量的值再起生命周期内可以发生变化.
 
-1. Java中同步机制是关键字synchronize, volatile, 显示锁(java.util.concurrent.lock包内), 原子变量(java.util.concurrent.atomic包内).
+1. Java中同步机制包括关键字synchronize, volatile, 显示锁(java.util.concurrent.lock包内), 原子变量(java.util.concurrent.atomic包内).
 &nbsp;
 2. 如果某个并发程序缺少必要的同步机制并且看上去似乎能正确执行, 但程序仍可能在某个时刻发生错误(活跃性风险).
 &nbsp;
@@ -131,7 +131,7 @@ public static void method() {
 }
 ```
 
-2. 每个Java对象都可以用做一个实现同步的锁, 这些锁被称为内置锁或监视器锁, 线程进入同步代码块之前获取锁, 退出同步代码块时释放锁, 较显式锁不同, 内置锁无论是正常退出还是异常退出都会释放锁.
+2. 每个Java对象都可以用做一个实现同步的锁, 这些锁被称为内置锁或监视器锁, 线程进入同步代码块之前获取锁, 退出同步代码块时释放锁, 较显式锁不同, **内置锁无论是正常退出还是异常退出都会释放锁**.
 
 ```java
 private final Object lock = new Object();
@@ -143,10 +143,9 @@ public void method() {
 
 #### 2.3.2 重入
 
-1. 线程可以获取一个已经由它持有的锁, 内置锁是可重入的.
+1. 线程可以获取一个已经由它持有的锁, 内置锁是可重入的, 如果内置锁不可重入, 那么以下这段代码将发生死锁
 
 ```java
-// 如果内置锁不可重入, 那么这段代码将发生死锁
 class Widget {
     public synchronized void doSomething() {}
 }
@@ -180,6 +179,236 @@ class LoggingWidget extends Widget {
 1. 再简单性与性能之间存在着相互制约因素, 当实现某个同步策略时, 一定不要盲目的为了性能而牺牲简单性(这可能会破坏安全性).
 &nbsp;
 2. 锁的持有时间过长会带来活跃性或性能问题, 当执行较长时间的计算或者可能无法快速完成的操作时(例如, 网路IO或控制台IO), 一定不要持有锁.
+
+---
+
+## 第3章 对象的共享
+
+> 一种常见的误解是, 认为关键字synchronize只能用于实现原子性或者确定临界区, 同步还有一个重要的方面: 内存可见性.
+
+### 3.1 可见性
+
+> 为了确保多个线程之间对内存写入操作的可见性, 必须使用同步机制.
+
+1. 请考虑以下程序:
+
+```java
+public class NoVisibility {
+    private static boolean ready;
+
+    private static class ReaderThread extends Thread {
+        private int i;
+
+        @Override
+        public void run() {
+            while (!ready)
+                i++;
+            System.out.println(i);
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        new ReaderThread().start();
+
+        TimeUnit.SECONDS.sleep(1);
+        ready = true;
+    }
+}
+```
+
+1. 以上程序看似最终输出一个i值, 实际运行发现这段程序大多数时候根本无法终止, 也就是说主线程将ready置为true, 而ReaderThread根本就没看到.
+
+2. 如果你认为以上程序错误的输出只是因为原子性的问题, 那也不对. 其实ready的读写原本就是原子性的, 如果说synchronize只保证了原子性, 那么将ready的读写用synchronize保护起来的话也是多此一举, 程序可能还是无法终止, 修改后代码如下:
+
+```java
+public class NoVisibility {
+    private static boolean ready;
+
+    private synchronized static boolean getReady() {
+        return ready;
+    }
+
+    private synchronized static void setReady(boolean ready) {
+        NoVisibility.ready = ready;
+    }
+
+    private static class ReaderThread extends Thread {
+        private int i;
+
+        @Override
+        public void run() {
+            while (!getReady())
+                i++;
+            System.out.println(i);
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        new ReaderThread().start();
+
+        TimeUnit.SECONDS.sleep(1);
+        setReady(true);
+    }
+}
+```
+
+1. 按照之前的推测修改后的程序也不会终止, 实际运行1s左右之后就输出i值了, 也就是说之前的推测是不对的, **synchronize不仅保证了操作的原子性, 又保证了它所保护的变量的可见性**.
+
+```java
+public class NoVisibility {
+    private static boolean ready;
+
+    private static class ReaderThread extends Thread {
+        private int i;
+
+        @Override
+        public void run() {
+            while (!ready)
+                i++;
+            System.out.println(i);
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        new ReaderThread().start();
+
+        TimeUnit.SECONDS.sleep(1);
+        ready = true;
+    }
+}
+```
+
+1. 看以上这段代码, 较第一段代码相比, 只修改了读线程while循环体, 将i++改为Thread.yield();, 运行发现它又能正常工作了, 这又印证一件事情: 如果不采用同步机制, 线程之间操作共享变量的可见性是随机的, 之前的i++使读线程所在CPU过于忙碌, 没时间去主存中获取最新的ready值, 而Thread.yield();则不是计算密集型任务, CPU可能会抽时间去主内存重新获取最新的ready值, 最终导致程序终止了, 但是这种重新获取值的操作带有随机性, 还是会有安全性风险. 如果强制让CPU每次访问ready值都从主内存中读取, 那么就不会带来这种问题, synchronize可以解决这个问题(volatile也能解决, 后序介绍). 当然每次都从主内存读取变量, 获取锁和释放锁, 锁的独占性等都会带来性能问题, 但是程序首先应以安全性为主, 其次才是性能.
+
+```java
+public class NoVisibility {
+    private static boolean ready;
+    private static int number;
+
+    private static class ReaderThread extends Thread {
+        @Override
+        public void run() {
+            while (!ready)
+                Thread.yield();
+            System.out.println(number);
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        new ReaderThread().start();
+        number = 42;
+        ready = true;
+    }
+}
+```
+
+1. 这段程序可能会一直循环下去, 这是由于内存可见性的问题. 更奇怪的有时程序会终止输出的number为0, 也就是说读线程看到了写入的ready值, 但是没有看到写入的number值, 这种线程称为重排序(详见第16章).
+
+在没有同步的情况下, 编译器, 处理器, 运行时等可能对操作的执行顺序进行一些意想不到的调整, 在缺乏足够同步的多线程程序中, 要想对内存操作的执行顺序进行判断, 几乎无法得出正确的结论.
+
+#### 3.1.1 失效值
+
+1. 3.1节中的几个程序展示了在缺乏同步的程序中可能产生错误结果的一种情况: 失效数据. 更糟糕的是, 失效值不会同时出现: 一个线程可能获得某个变量的最新值, 而获得另一个变量的失效值.
+
+#### 3.1.2 非原子的64位操作
+
+1. Java内存模型要求, 变量的读取和写入操作都必须是原子操作, 但对于非volatile类型的long和double变量, JVM允许将64位的读操作或写操作, 分解为两个32位的操作. 当读取一个非volatile类型的long变量时, 如果对该变量的读操作和写操作在不同的线程中执行, 那么很可能会读取到每个值的高32位和另一个值的第32位, 这被称为字撕裂, 通过volatile修饰或者用锁保护起来的long或double可以保证读写原子性.
+
+#### 3.1.3 加锁与可见性
+
+1. 加锁可以用于确保某个线程以一种可预测的方式来查看另一个线程执行结果.
+
+2. 加锁的含义不仅仅局限于互斥行为, 还包括内存可见性. 为了确保所有线程都能看到共享变量的最新值, 所有执行读操作和写操作的线程都必须在同一个锁上进行同步.
+
+#### volatile变量
+
+1. 编译器和运行时不会对volatile变量上的操作与其他内存操作一起重排序, volatile变量也不会被缓存在寄存器或者对其它处理器不可见的地方, 读取volatile变量时总是返回最新写入的值.
+
+2. volatile变量是一种比synchronize关键字更轻量级的同步机制.(在当前大多数处理器中, 读取volatile变量比读取非volatile变量的开销略高一些)
+
+3. 加锁机制既可以确保可见性又可以确保原子性, 而volatile变量只能确保可见性.
+
+当且仅当满足以下条件时, 才可以使用volatile变量:
+* 对变量的写入操作不依赖于变量当前值, 或者你能确保只有单个线程更新变量的值.
+* 该变量不会与其它状态变量一起纳入不变性条件中.
+* 在访问变量时不需要加锁.
+
+(个人理解: 只要能够保证变量的操作原子性, 那么就可以使用volatile, 例如3.1节中的ready变量值, 它的读写操作都是原子操作, 就可以用volatile来修正3.1.1节中程序存在的问题.)
+
+### 3.2 发布与逸出
+
+1. 发布一个对象是指该对象能够在当前作用于之外的代码中使用(例如对象的初始化)
+
+2. 当发布某个对象时, 如果在发布过程中确保线程安全性, 则需要使用同步.
+
+3. 发布内部状态可能会破坏封装性, 并使得程序难以维持不变性条件.
+
+4. 当某个不应该被发布的对象被发布时, 这种情况被称为逸出.
+
+5. 发布某个对象时会间接发布其它对象, 例如发布一个Map时, 会间接将Map中存储的键值也发布.
+
+6. 不要再构造过程中使this引用逸出.
+
+```java
+// this引用逸出
+public class ThisEscape {
+    public ThisEscape(EventSource source) {
+        source.registerListener(new EventListener() {
+            public void onEvent(Event e) {
+                doSomething(e);
+            }
+        });
+    }
+
+    void doSomething(Event e) {}
+
+    interface EventSource {
+        void registerListener(EventListener e);
+    }
+
+    interface EventListener {
+        void onEvent(Event e);
+    }
+
+    interface Event {}
+}
+```
+
+7. 可以使用私有构造函数和工厂方法来避免this引用逸出问题.
+
+```java
+public class SafeListener {
+    private final EventListener listener;
+
+    private SafeListener() {
+        listener = new EventListener() {
+            public void onEvent(Event e) {
+                doSomething(e);
+            }
+        };
+    }
+
+    public static SafeListener newInstance(EventSource source) {
+        SafeListener safe = new SafeListener();
+        source.registerListener(safe.listener);
+        return safe;
+    }
+
+    void doSomething(Event e) {}
+
+    interface EventSource {
+        void registerListener(EventListener e);
+    }
+
+    interface EventListener {
+        void onEvent(Event e);
+    }
+
+    interface Event {}
+}
+```
+
+### 3.3 线程封闭
 
 ---
 
