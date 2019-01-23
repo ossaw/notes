@@ -410,6 +410,44 @@ public class SafeListener {
 
 ### 3.3 线程封闭
 
+> 当某个对象封闭在一个线程中时, 这中用法将自动实现线程安全性, 即使被封闭的对象本事不是线程安全的, 同样在现成封闭的环境中使用线程不安全的对象也免去了线程同步和协调的开销, 比如在方法中肯定是优先使用HashMap, 而不是HashTable.
+
+#### 3.3.1 Ad-hoc线程封闭
+
+1. Ad-hoc线程封闭是指, 维护线程封闭性的职责完全由程序实现来承担.
+
+2. Ad-hoc线程封闭程序较脆弱, 因此在程序中尽量少用, 在可能的情况下使用更强的线程封闭技术, 例如栈封闭或者ThreadLocal类.
+
+#### 3.3.2 栈封闭
+
+1. 栈封闭是将变量封闭在线程本地栈中, 其它线程无法访问这个栈.
+
+2. 一种常用的栈封闭手段就是使用局部变量
+
+```java
+public int loadTheArk(Collection<Animal> candidates) {
+	SortedSet<Animal> animals;
+	int numPairs = 0;
+	Animal candidate = null;
+	// animals confined to method, don’t let them escape!
+	animals = new TreeSet<Animal>(new SpeciesGenderComparator());
+	animals.addAll(candidates);
+	for (Animal a : animals) {
+		if (candidate == null || !candidate.isPotentialMate(a))
+			candidate = a;
+		else {
+			ark.load(new AnimalPair(candidate, a));
+			++numPairs;
+			candidate = null;
+		}
+	}
+	return numPairs;
+}
+```
+
+#### 3.3.3 ThreadLocl类
+
+
 ---
 
 ## 第16章 Java内存模型
@@ -466,7 +504,7 @@ public class PossibleReordering {
 ```
 
 经验证上述程序会打印出(0, 0), 如果不出现重排序的情况, 是不会出现这种结果, 程序运行时序可能如下:
-![Alt text](https://github.com/ossaw/notes/blob/master/pictures/java%20concurrency%20in%20practice%2016-1.jpg?raw=true)
+![Alt text](https://github.com/ossaw/notes/blob/master/Pictures/java-concurrency in-practice-16-1?raw=true)
 
 #### 16.1.3 Java内存模型简介
 
