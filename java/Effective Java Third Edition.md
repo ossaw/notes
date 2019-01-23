@@ -314,3 +314,290 @@ public class UtilityClass {
 2. 这种方式的缺点在于不能使该类被子类化, 因为子类没有可访问的超类构造器可用.
 
 ### 第5条: 优先考虑依赖注入来引用资源
+
+1. 有的类可能需要依赖一个或多个底层资源, 静态工具类和Singleton类并不适合于需要引用底层资源的类.
+
+```java
+public class SpellChecker {
+    private static final Lexicon dictionary = new Object();
+
+    private SpellChecker() {} // Noninstantiable
+
+    public static boolean isValid(String word) {}
+
+    public static List<String> suggestions(String typo) {}
+}
+
+// Inappropriate use of singleton - inflexible & untestable!
+public class SpellChecker {
+    private final Lexicon dictionary = new Object();
+
+    private SpellChecker() {}
+
+    public static final INSTANCE = new SpellChecker();
+
+    public boolean isValid(String word) {}
+
+    public List<String> suggestions(String typo) {}
+}
+```
+
+2. 上面两种方式, 一个不可实例化, 一个单例, 也就表明它们无法依赖多个类型的Lexicon, 如果想要依赖多种类型的Lexicon, 必须提供set函数, 这会破坏Lexicon final属性, 导致无法并行工作.
+
+3. 这种类需要的是能够支持类的多个实例, 当创建一个新的实例时, 就将该资源传到构造器中, 这是依赖注入的一种形式.
+
+4. 依赖注入的对象具有不可变性, 多个客户端可以共享依赖对象, 依赖注入同样适用于构造器, 静态工厂和构建器.
+
+5. 这种模式的另一种变体是, 将资源工厂传给构造器, 工厂是可以被重复调用来创建类型实例的一个对象, 这类工厂具体表现为工厂方法模式. 在Java8中增加的函数式接口Supplier<T>, 最适合用于表示工厂.
+
+6. 依赖注入极大地提升了灵活性和可测试性, 但会导致大型项目的凌乱不堪, 因为它通常包含上千个依赖, 这可以采用一种依赖注入框架来解决, 如Spring.
+
+7. 需要注意的是Spring框架注入的Bean虽然默认是单例的, 且大多数Bean中依赖多个资源, set注入方式还破坏资源的final属性, 这些看起来似乎和本条目相矛盾, 实则不然, Spring采用set注入的这种Bean, 虽然从技术上来看是可变的, 但是从业务上来看其依赖资源在发布后是不可变的(在传统的MVC模式中, 似乎没有哪个系统会人为修改Spring注入的资源), 这种Bean被称为事实不可变对象(参加那个Java并发编程实战第3.5.4章).
+
+### 第6条: 避免创建不必要的对象
+
+1. 最后能够重用单个对象, 而不是在每次需要的时候创建一个相同功能的对象, 重用方式即快速, 又流行. 如果对象是不可变的(当然某些适当的情况下也包括事实不可变对象), 它就始终可以被重用.
+
+```java
+String s = new String("bikini"); // DON'T DO THIS!
+
+String s = "bikini"; // DO THIS!
+```
+
+2. 对于同时提供了静态工厂和构造器的不可变类, 通常优先使用静态工厂方法而不是构造器, 以避免创建不必要的对象.
+
+3. 处理重用不可变对象之外, 也可以重用哪些已知不会修改的可变对象(事实不可变对象).
+
+4. 有些对象的创建成本比较高, 如果需要重复的需要这类对象, 可将其缓存起来(例如数据库连接或者线程, 可采用池化技术缓存连接或者线程)
+
+```java
+// Performance can be greatly improved!
+static boolean isRomanNumeral(String s) {
+    return s.matches("^(?=.)M*(C[MD]|D?C{0,3})"
+        + "(X[CL]|L?X{0,3})(I[XV]|V?I{0,3})$");
+}
+```
+
+这段代码在不适合在注重性能的场景下被频繁的调用, 问题在于matches方法内部创建了一个Pattern实例, 只用了一次就进行垃圾回收了, 这个实例的创建成本很高.
+
+```java
+// Reusing expensive object for improved performance
+public class RomanNumerals {
+	private static final Pattern ROMAN =
+			Pattern.compile("^(?=.)M*(C[MD]|D?C{0,3})(X[CL]|L?X{0,3})(I[XV]|V?I{0,3})$");
+
+	static boolean isRomanNumeral(String s) {
+		return ROMAN.matcher(s).matches();
+	}
+}
+```
+
+将Pattern变成一个成为类初始化的一部分, 将其缓存起来, 每次调用都会重用, 必要的时候可以采用延迟初始化技术(第83条).
+
+当然如果isRomanNumeral方法没有被频繁调用, 可以采用第一种方式, 节省内存空间, 具体可酌情考虑.
+
+5. 另一种创建对象的方式是自动装箱, 自动装箱是的基本类型和包装类型之间的差别模糊起来, 但是并没有完全消除.
+
+```java
+// Hideously slow! Can you spot the object creation?
+private static long sum() {
+	Long sum = 0L;
+	for (long i = 0; i <= Integer.MAX_VALUE; i++)
+		sum += i;
+	return sum;
+}
+```
+
+这段程序就因为将sum声明为Long包装类, 在后续的计算过程中构造了$2^31$个Long实例, 将sum的声明long基本类型之后, 性能提升很高.
+
+6. 优先使用基本类型, 而不是包装类型, 当心无意识的自动装箱操作.
+
+7. 对象池技术适合用来缓存一些重量级对象.
+
+8. 本条目与第50条有关保护性拷贝相对应, 本条目是说当你应该重用现有对象时, 请不要创建新对象. 第50条是说: 当你应该创建新对象时, 请不要重用现有对象. 必要时如果没能实施保护性拷贝, 将会导致潜在的BUG和安全漏洞, 而不必要的创建对象则只会影响程序的风格和性能.
+
+### 第7条: 消除过期的引用
+
+> 即使有垃圾回收器, 也会存在内存泄露问题, 消除过期引用有助于垃圾回收.
+
+```java
+// Can you spot the "memory leak"?  (Pages 26-27)
+public class Stack {
+    private static final int DEFAULT_INITIAL_CAPACITY = 16;
+    private Object[] elements;
+    private int size = 0;
+
+    public Stack() {
+        elements = new Object[DEFAULT_INITIAL_CAPACITY];
+    }
+
+    public static void main(String[] args) {
+        Stack stack = new Stack();
+        for (String arg : args) {
+            stack.push(arg);
+        }
+
+        while (true) {
+            System.err.println(stack.pop());
+        }
+    }
+
+    public void push(Object e) {
+        ensureCapacity();
+        elements[size++] = e;
+    }
+
+    public Object pop() {
+        if (size == 0) {
+            throw new EmptyStackException();
+        }
+        return elements[--size];
+    }
+
+    /**
+     * Ensure space for at least one more element, roughly doubling the capacity each time the array
+     * needs to grow.
+     */
+    private void ensureCapacity() {
+        if (elements.length == size) {
+            elements = Arrays.copyOf(elements, 2 * size + 1);
+        }
+    }
+}
+```
+
+1. 这段程序没有明显的功能错误, 但是却存在内存泄露问题, 如果这个栈先是增长, 然后在收缩, 那么从栈中弹出来的对象不会被垃圾回收, 因为栈内部维护了对这些对象的过期引用.
+
+2. 如果一个引用被无意识的保存起来, 那么垃圾回收器不仅不处理这个对象, 也不会处理这个对象所引用的其它可达对象.
+
+```java
+// Corrected version of pop method (Page 27)
+public Object pop() {
+	if (size == 0)
+		throw new EmptyStackException();
+	Object result = elements[--size];
+	elements[size] = null; // Eliminate obsolete reference
+	return result;
+}
+```
+
+新的pop方法可修正内存泄露问题, 显示清空已弹出栈的过期引用.
+
+3. 清除过期引用的另一个好处是, 如果过期引用再次被使用, 那么程序立刻回抛出NullPointException异常, 而不是悄悄的错误运行下去.
+
+4. 只要类是自己管理内存, 程序员就应该警惕内存泄露问题, 一旦元素被释放掉, 则该元素包含的任何对象引用都应该被清空.
+
+5. 内存泄露另一常见来源是缓存, 将对象引用放到缓存中, 很容易被忘掉, 造成内存泄露.
+
+6. 只要缓存之外存在对某个项的键的引用, 该项就有意义, 那么可以使用WeakHashMap代表缓存, 当缓存中的项过期后, 它们就会被自动的清除, 记住只有当所要的缓存项的生命周期是由该键的外部引用而不是由值决定时, WeakHashMap才有用处.
+
+7. 内存泄露的第三个常见来源是监听器和其它回调, 如果你实现一个API, 客户端在这个API中注册回调, 却没有显式取消回调.
+
+8. 借助Heap剖析工具可发现内存泄露问题.
+
+### 第8条: 避免使用终结方法和清除方法
+
+1. 终结(finalizer)方法通常是不可预测的, 也是很危险的, 一般情况下不要使用, 使用终结方法会导致行为不稳定, 性能降低, 以及可移植性问题.
+
+2. 在Java9中用清除方法代替了终结方法, 清除方法没有终结方法那么危险, 但仍然是不可预测, 运行缓慢, 一般情况下也是不必要的.
+
+3. 终结方法和清除方法的缺点在于不能保证会被及时执行, 注重时间的任务不应该用终结方法或者清除方法来完成.
+
+4. 永远不应该依赖终结方法或清除方法来更新重要的持久状态.
+
+5. 如果忽略在终结过程中被抛出的未被捕获的异常, 该对象的终结过程也会终止.
+
+6. 使用终结方法或者清除方法还有严重的性能损失.
+
+7. 终结方法有一个严重的安全问题: 它们为终结方法攻击打开了类的大门, 从构造器中抛出异常, 应该足以防止对象继续存在, 有了终结方法的存在, 这一点就做不到了, 为了防止非final类受到终结方法攻击, 要编写一个空的final的finalizer方法.
+
+8. 终结方法和清除方法有两个用途如下:
+当资源的所有者忘记调用它的close方法时, 终结方法或者清除方法可以充当安全网.
+清除方法的第二种理由与对象的本地对等体有关. 本地对等体属于堆外内存, JVM不会回收, 这部分的内存需要人为释放.
+
+9. 此条目后续内容涉及Java9特性, 暂不介绍.
+
+### 第9条: try-wiht-resources优先于try-finally
+
+1. 在处理必须关闭的资源时, 始终要优先考虑用try-with-resources, 而不是用try-finally, 这样得到的代码将更简洁, 产生的异常也更有价值.
+
+## 第3章 对于所有对象都通用的方法
+
+> 任何一个类在重写Object类的非final方法时, 都有责任遵守通用约定, 如果不能做到这一点, 其它依赖这些约定的类将无法结合该类一起工作
+
+### 第10条: 重写equals请遵守通用约定
+
+在一下任意一种情况下不用重写equals方法:
+
+* 类的每个实例本质上都是唯一的.(一些非值类, 例如Thread)
+
+* 类没有必要提供逻辑相等的测试功能.(一些工具类, 单例类)
+
+* 超类已经重写了equals, 超类的行为对于这个类也是合适的. (在一些抽象类中可能会提供这种全局统一的实现, 例如Set从AbstractSet继承equals)
+
+* 类是私有的(通常指内部类), 或是包级私有的, 并且你可以确定业务中它的equals方法永远不会被调用.
+
+如果类具有自己的特有的逻辑相等的概念, 且超类还没有重写equals, 这通常是指值类, 例如String.
+
+覆盖equals时, 必须遵守它的通用约定:
+
+* 自反性: 对于非null的引用值x, x.equals(x)必须返回true.
+
+* 对称性: 对于非null的引用值x, y, x.equals(y)为true, 那么y.equals(x)也必须返回true.
+
+* 传递性: 对于非null的引用值x, y, z, x.equals(y)为true, y.equals(z)为true, 那么x.equals(z)也必须返回true.
+
+* 一致性: 对于非null的引用值x, y, 只要equals比较的对象信息没有被修改, 多次调用x.equals(y)都会一致返回true或false.
+
+* 对于非null引用x, x.eqauls(null), 必须返回false.
+
+实现高质量equals方法的诀窍: 
+
+1. 使用 == 操作符判断参数是否为这个对象的引用, 是则返回true, 否则返回false.
+
+2. 使用instanceof操作符检查参数是否为正确的类型, 不是返回false.
+
+3. 把参数转换为正确的类型.
+
+4. 对于该类中的每个关键域, 检查参数对象的域是否与该对象中的域想匹配.
+
+```java
+// Class with a typical equals method (Page 48)
+public final class PhoneNumber {
+    private final short areaCode, prefix, lineNum;
+
+    public PhoneNumber(int areaCode, int prefix, int lineNum) {
+        this.areaCode = rangeCheck(areaCode, 999, "area code");
+        this.prefix = rangeCheck(prefix, 999, "prefix");
+        this.lineNum = rangeCheck(lineNum, 9999, "line num");
+    }
+
+    private static short rangeCheck(int val, int max, String arg) {
+        if (val < 0 || val > max) {
+            throw new IllegalArgumentException(arg + ": " + val);
+        }
+        return (short) val;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (!(o instanceof PhoneNumber)) {
+            return false;
+        }
+        PhoneNumber pn = (PhoneNumber) o;
+        return pn.lineNum == lineNum && pn.prefix == prefix
+                && pn.areaCode == areaCode;
+    }
+
+    // Remainder omitted - note that hashCode is REQUIRED (Item 11)!
+}
+```
+
+1. 重写equals总要重写hashCode.
+
+2. 不要企图让equals方法过于智能.
+
+3. 不要将equals生命中的Object对象替换为其它类型, 替换了那就不是重写了, 可以使用@Override注解来协助检查.
