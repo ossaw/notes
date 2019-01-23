@@ -504,7 +504,7 @@ public class PossibleReordering {
 ```
 
 经验证上述程序会打印出(0, 0), 如果不出现重排序的情况, 是不会出现这种结果, 程序运行时序可能如下:
-![Alt text](https://github.com/ossaw/notes/blob/master/Pictures/java-concurrency in-practice-16-1?raw=true)
+![Alt text](https://github.com/ossaw/notes/blob/master/Pictures/jcip/java-concurrency-in-practice-16-1.jpg)
 
 #### 16.1.3 Java内存模型简介
 
