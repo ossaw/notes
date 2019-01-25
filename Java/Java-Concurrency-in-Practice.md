@@ -590,6 +590,153 @@ public class Holder {
 
 ---
 
+## 第15章 原子变量与非阻塞同步机制
+
+### 15.1 锁的劣势
+
+1. 多线程竞争锁, 需要挂起和恢复未获取到锁的线程, 需要借助操作系统介入, 存在很大的开销, 现代JVM的锁优化技术并不能全部优化掉.
+
+2. 与锁相比, volatile并不会引起线程上下文切换或线程调度.
+
+3. 如果被阻塞的线程优先级高, 持有锁的线程优先级低, 会发生优先级翻转问题.(不要依赖线程优先级, 它具有不稳定性和平台相关性, 考虑使用优先级队列来实现同样的问题)
+
+4. 如果锁一直被持有, 其它线程无法继续, 线程饥饿问题.
+
+5. 独占锁是一种悲观技术.
+
+### 15.2 硬件对并发的支持
+
+1. 几乎所有的现代处理器中都包含了某种形式的原子读-改-写指令, 例如比较并交换(Compare-and-Swap, CAS)或者关联加载/条件存储(Load-Linked/Store-Conditional), Java1.5之前, Java类中不能直接使用这些指令.
+
+#### 15.2.1 比较并交换(Compare-and-Swap, CAS)
+
+1. CAS需要三个参数: 内存地址V, 进行比较的变量预期值A, 即将写入的变量更新值B.
+
+2. CAS的含义是: 我认为V的值是A, 如果是, 那么将V的值更新为B, 否则不修改并告诉V的值实际是多少, 这一系列操作时原子性的, 并且如果CAS操作失败, 线程并不会挂起阻塞.
+
+3. CAS能检测来自其它线程的干扰
+
+4. CAS通常配合volatile使用, 已达到非阻塞锁的作用.
+
+```java
+// 模拟CAS操作
+@ThreadSafe
+public class SimulatedCAS {
+    @GuardedBy("this")
+    private int value;
+
+    public synchronized int get() {
+        return value;
+    }
+
+    public synchronized int compareAndSwap(int expectedValue, int newValue) {
+        int oldValue = value;
+        if (oldValue == expectedValue)
+            value = newValue;
+        return oldValue;
+    }
+
+    public synchronized boolean compareAndSet(int expectedValue, int newValue) {
+        return (expectedValue == compareAndSwap(expectedValue, newValue));
+    }
+}
+```
+
+#### 15.2.2 非阻塞的计数器
+
+```java
+@ThreadSafe
+public class CasCounter {
+    private SimulatedCAS value;
+
+    public int getValue() {
+        return value.get();
+    }
+
+    public int increment() {
+        int v;
+        do {
+            v = value.get();
+        } while (v != value.compareAndSwap(v, v + 1));
+        return v + 1;
+    }
+}
+```
+
+1. CAS主要缺点: 它使调用者处理竞争问题(重试, 回退, 放弃), 而在锁中能自动处理竞争问题(线程获取锁之前将一直阻塞), CAS最大的缺陷是难以围绕CAS正确构建外部算法.
+
+2. 虽然和锁相比CAS代码更复杂, 但是CAS不需要执行JVM代码, 而锁需要JVM介入, 总体开销小于锁开销.
+
+3. 经验法则: 在大多数处理器上, 在无竞争的锁获取和释放的**快速代码路径**上的开销, 大约是CAS开销的两倍.
+
+#### 15.2.3 JVM对CAS的支持
+
+1. 引入sun.misc.Unsafe类的本地方法来支持CAS技术.
+
+### 15.3 原子变量类
+
+1. 位于java.util.concurrent.atomic包中, 原子变量类未重写equals和hashCode方法, 不宜用作基于散列容器中的键值.
+
+#### 15.3.1 原子变量是一种更好的volatile
+
+```java
+@ThreadSafe
+public class CasNumberRange {
+    @Immutable
+    private static class IntPair {
+        // INVARIANT: lower <= upper
+        final int lower;
+        final int upper;
+
+        public IntPair(int lower, int upper) {
+            this.lower = lower;
+            this.upper = upper;
+        }
+    }
+
+    private final AtomicReference<IntPair> values =
+            new AtomicReference<>(new IntPair(0, 0));
+
+    public int getLower() {
+        return values.get().lower;
+    }
+
+    public int getUpper() {
+        return values.get().upper;
+    }
+
+    public void setLower(int i) {
+        while (true) {
+            IntPair oldv = values.get();
+            if (i > oldv.upper)
+                throw new IllegalArgumentException("Can't set lower to " + i + " > upper");
+            IntPair newv = new IntPair(i, oldv.upper);
+            if (values.compareAndSet(oldv, newv))
+                return;
+        }
+    }
+
+    public void setUpper(int i) {
+        while (true) {
+            IntPair oldv = values.get();
+            if (i < oldv.lower)
+                throw new IllegalArgumentException("Can't set upper to " + i + " < lower");
+            IntPair newv = new IntPair(oldv.lower, i);
+            if (values.compareAndSet(oldv, newv))
+                return;
+        }
+    }
+}
+```
+
+#### 15.3.2 性能比较: 锁与原子变量
+
+1. 在高强度竞争下, 锁的性能超过原子变量的性能, 且具有更高的可伸缩性, 在中低强度的竞争下, 锁的性能低于原子变量的性能, 且伸缩性也不如原子变量. 大多数程序的锁竞争程度不会太高.
+
+2. 只有完全消除竞争, 才能实现真正的可伸缩性.
+
+---
+
 ## 第16章 Java内存模型
 
 > Java 线程中的一些高层设计问题例如安全发布, 同步策略, 一致性等, 这些问题的保证都来自于Java内存模型
