@@ -447,6 +447,146 @@ public int loadTheArk(Collection<Animal> candidates) {
 
 #### 3.3.3 ThreadLocl类
 
+1. 使用ThreadLocal类也可以实现线程封闭.
+
+2. ThreadLocal通常用作全局变量, 降低代码可重用性, 在类之间引入隐含的耦合性, 使用时要注意.
+
+### 3.4 不变性
+
+1. 不可变的对象一定是线程安全的.
+
+2. 不可变对象满足以下条件: 
+对象创建以后状态不能修改.
+对象的所有域都是final类型(如果保证域在业务上是不可变的, 也可以不用final类型(如: String的hashCode域), 尽量避免这么做).
+对象是正确创建的(创建期间, this引用没有逸出)
+
+### 3.4.1 final域
+
+1. 在Java内存模型中, final域能确保初始化过程的安全性, 共享这些对象时无需同步.
+
+2. 尽量将于设置成final类型.
+
+### 3.4.2 使用volatile类型来发布不可变对象
+
+1. 对于在访问和更新多个相关变量时出现的竞争条件问题, 可以通过将这些变量全部保存在一个不可变对象中消除.
+
+```java
+@ThreadSafe
+public class VolatileCachedFactorizer extends GenericServlet implements
+        Servlet {
+    private volatile OneValueCache cache = new OneValueCache(null, null);
+
+    public void service(ServletRequest req, ServletResponse resp) {
+        BigInteger i = extractFromRequest(req);
+        BigInteger[] factors = cache.getFactors(i);
+        if (factors == null) {
+            factors = factor(i);
+            cache = new OneValueCache(i, factors);
+        }
+        encodeIntoResponse(resp, factors);
+    }
+
+    void encodeIntoResponse(ServletResponse resp, BigInteger[] factors) {}
+
+    BigInteger extractFromRequest(ServletRequest req) {
+        return new BigInteger("7");
+    }
+
+    BigInteger[] factor(BigInteger i) {
+        // Doesn't really factor
+        return new BigInteger[] { i };
+    }
+}
+
+@Immutable
+public class OneValueCache {
+    private final BigInteger lastNumber;
+    private final BigInteger[] lastFactors;
+
+    public OneValueCache(BigInteger i, BigInteger[] factors) {
+        lastNumber = i;
+        lastFactors = Arrays.copyOf(factors, factors.length);
+    }
+
+    public BigInteger[] getFactors(BigInteger i) {
+        if (lastNumber == null || !lastNumber.equals(i))
+            return null;
+        else
+            return Arrays.copyOf(lastFactors, lastFactors.length);
+    }
+}
+```
+
+### 3.5 安全发布
+
+1. 由于内存可见性的问题, 导致对象不安全发布.
+
+#### 3.5.1 不正确的发布: 正确的对象被坏
+
+1. 由于没有使用同步来确保内存可见性, Holder类的assertSanity方法会抛异常.
+
+```java
+public class Holder {
+    private int n;
+
+    public Holder(int n) {
+        this.n = n;
+    }
+
+    public void assertSanity() {
+        if (n != n)
+            throw new AssertionError("This statement is false.");
+    }
+}
+```
+
+2. 一个线程初始化字段n, 对另一个线程看到的可能是一个null或者旧值(默认初始值), 导致if(n != n)两次读取到不一致的值.
+
+#### 3.5.1 不可变对象与初始化安全性
+
+1. 任何线程都可以在不需要同步的情况下安全地访问不可变对象, 即使发布对象时没有使用同步.
+
+2. 如果final类型的域指向的是可变对象, 那么在访问这些域指向的对象的状态时仍然需要同步.
+
+#### 3.5.3 安全发布的常用模式
+
+安全发布方式:
+
+* 在静态初始化函数中初始化一个对象引用.
+
+* 将对象的引用保存到volatile类型的域或者AtomicReferance对象中.
+
+* 将对象的引用保存到某个被正确构造对象的final类型域中.
+
+* 将对象的引用保存到一个由锁保护的域中.
+
+#### 3.5.4 事实不可变对象
+
+1. 如果对象从技术上看是可变的, 但是状态在发布之后不会再改变, 这种对象称之为事实不可变对象.
+
+2. 在没有额外同步的情况下, 任何线程都可以安全地使用被安全发布的事实不可变对象.
+
+#### 3.5.5 可变对象
+
+对象的发布需求取决于它的可变性
+
+* 不可变对象可以通过任意方式来发布
+
+* 事实不可变对象必须通过安全发布的方式来发布
+
+* 可变对象必须通过安全发布的方式来发布, 并且必须是线程安全的类或者由某个锁保护起来
+
+#### 3.5.6 安全地共享对象
+
+在并发程序中使用和共享对象时, 可以使用一些实用的策略
+
+* 线程封闭: 线程封闭的对象只能由一个线程访问.
+
+* 只读共享: 不可变对象和事实不可变对象.
+
+* 线程安全共享: 线程安全的对象内部实现同步机制, 如ConcurrentHashMap.
+
+* 保护对象: 通过持有特定的锁来访问.
 
 ---
 

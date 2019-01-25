@@ -601,3 +601,104 @@ public final class PhoneNumber {
 2. 不要企图让equals方法过于智能.
 
 3. 不要将equals生命中的Object对象替换为其它类型, 替换了那就不是重写了, 可以使用@Override注解来协助检查.
+
+### 第11条: 重写equals是总要重写hashCode
+
+> 在每个重写了equals方法的类中, 都必须重写hashCode方法, 如果不这样做会违反hashCode通用约定, 导致基于散列的集合无法正常工作, 例如HashMap, HashSet等.
+
+Object规范: 
+
+* 在程序执行期间, 只要对象equals方法所需要的信息没有被修改, 那么多次执行eqauls, 都必须返回相同的hashCode.
+
+* 如果两个对象的equals方法是相等的, 那么它们的hashCode方法也必须返回同样的结果
+
+* 如果两个对象的equals方法, 那么调用这两个对象的hashCode不一定必须返回不同的结果, 但是应该清楚, 两个不相等的对象产生不同的散列值, 有助于提高散列表的性能.
+
+假设在HashMap中用第10条中出现过的PhoneNumber类的实例作为键:
+
+```java
+Map<PhoneNumber, String> map = new HashMap<>();
+map.put(new PhoneNumber(1, 2, 3), "Tom");
+System.out.println(map.get(new PhoneNumber(1, 2, 3)));
+```
+
+这段程序可能会输出Tom, 但是实际返回的是null, 因为PhoneNumber重写equals方法而没有重写hashCode违反Object规范导致计算失败, 具体详细信息查阅HashMap源码.
+
+```java
+// The worst possible leagl hashCode implemention - never use
+@Override
+public int hashCode() {
+	return 42;
+}
+```
+
+上面的hashCode方法是合法的, 遵守的Object硬性规范, 但是违反了规范中最后一句话: **两个不相等的对象产生不同的散列值, 有助于提高散列表的性能.**
+
+一个好的散列函数应该如下:
+
+```java
+@Override
+public int hashCode() {
+	int result = Short.hashCode(areaCode);
+	result = 31 * result + Short.hashCode(prefix);
+	result = 31 * result + Short.hashCode(lineNum);
+	return result;
+}
+```
+
+重写hashCode时需要注意, 在hashCode中进行比较的域一定要和equals中进行比较的域相同, 否则违反Object规范第二条.
+
+如果一个类是**不可变**的, 且计算散列值开销较大, 考虑将散列码缓存在类内部, 减少计算次数. 如果这种类型的大多数对象会被用作散列键, 考虑在创建实例的时候计算散列码, 否则考虑延迟初始化(第83条).
+
+```java
+// 缓存散列码并延迟初始化
+@Override
+public int hashCode() {
+	int result = hashCode;
+	if (result == 0) {
+		result = Short.hashCode(areaCode);
+		result = 31 * result + Short.hashCode(prefix);
+		result = 31 * result + Short.hashCode(lineNum);
+		hashCode = result;
+	}
+	return result;
+}
+```
+
+不要试图从散列码计算中排除一个域来提高性能.
+
+不要对hashCode方法的返回值做出具体的规定, 因此客户端无法理所当然的依赖它, 这样可以为后序修改提供灵活性.
+
+### 第12条: 始终要重写toString方法
+
+1. toString方法应该返回对象中包含的所有值得关注的信息, 并且是简洁易于阅读的形式.
+
+2. 良好的toString方法可以让类使用起来更加舒适, 也易于调试.
+
+3. 无论是否指定格式, 都应该在文档中明确地表明你的意图, 都为toString返回值中包含的所有信息提供一种可以通过编程访问之的途径.
+
+### 第13条: 谨慎地重写clone
+
+1. Cloneable接口的目的是作为对象的一个mixin接口, 表明这样的对象可以克隆.
+
+2. Cloneable接口中没有任何方法, 但是它决定了Object中的clone方法实现的行为.
+
+3. 实现Cloneable接口的类是为了提供一个功能适当的公有的clone方法, 它无需调用构造器就能创建对象.
+
+# 待补充
+
+### 第14条: 考虑实现Comparable接口
+
+1. 类实现了Comparable接口, 就表明它的实例存在内在的排序关系.
+
+2. 类实现了Comparable接口, 就可以和很多泛型算法以及依赖于该接口的集合实现进行协作.
+
+3. compareTo方法的通用约定与equals约定类似, 自反性, 传递性, 对称性.
+
+4. 强烈建议满足(x.compareTo(y) == 0) == x.equals(y), 若不满足请予以说明: 该类存在内在排序功能, 但是与equals不一致.
+
+5. 与equals不同, equals是与Object对象进行比较, compareTo是与泛型参数进行比较.
+
+6. 当你想为一个实现了Comparable接口的类增加值组件时, 不要继承这个类, 新编写一个类, 其中包含第一个类的实例(第18条).
+
+7. 从类中最关键的域开始比较, 逐步扩散到所有域, 如果其中某个域返回非零操作结果, 直接返回该结果.
