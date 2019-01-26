@@ -735,6 +735,115 @@ public class CasNumberRange {
 
 2. 只有完全消除竞争, 才能实现真正的可伸缩性.
 
+### 15.4 非阻塞算法
+
+1. 一个线程的失败或挂起不会导致其它线程也失败或挂起, 这种算法称为非阻塞算法.
+
+2. 构建非阻塞算法的技巧: 将执行原子修改的范围缩小到单个变量上.
+
+#### 15.4.1 非阻塞的栈
+
+```java
+@ThreadSafe
+public class ConcurrentStack<E> {
+    private final AtomicReference<Node<E>> top = new AtomicReference<Node<E>>();
+
+    public void push(E item) {
+        Node<E> newHead = new Node<E>(item);
+        Node<E> oldHead;
+        do {
+            oldHead = top.get();
+            newHead.next = oldHead;
+        } while (!top.compareAndSet(oldHead, newHead));
+    }
+
+    public E pop() {
+        Node<E> oldHead;
+        Node<E> newHead;
+        do {
+            oldHead = top.get();
+            if (oldHead == null)
+                return null;
+            newHead = oldHead.next;
+        } while (!top.compareAndSet(oldHead, newHead));
+        return oldHead.item;
+    }
+
+    private static class Node<E> {
+        public final E item;
+        public Node<E> next;
+
+        public Node(E item) {
+            this.item = item;
+        }
+    }
+}
+```
+
+#### 15.4.2 非阻塞的链表
+
+```java
+@ThreadSafe
+public class LinkedQueue<E> {
+
+    private static class Node<E> {
+        final E item;
+        final AtomicReference<Node<E>> next;
+
+        public Node(E item, Node<E> next) {
+            this.item = item;
+            this.next = new AtomicReference<>(next);
+        }
+    }
+
+    private final Node<E> dummy = new Node<>(null, null);
+    private final AtomicReference<Node<E>> head = new AtomicReference<>(dummy);
+    private final AtomicReference<Node<E>> tail = new AtomicReference<>(dummy);
+
+    public boolean put(E item) {
+        final Node<E> newNode = new Node<>(item, null);
+        while (true) {
+            Node<E> curTail = tail.get();
+            Node<E> tailNext = curTail.next.get();
+            if (curTail == tail.get()) {
+                if (tailNext != null)
+                    // Queue in intermediate state, advance tail
+                    tail.compareAndSet(curTail, tailNext);
+                else {
+                    // In quiescent state, try inserting new node
+                    if (curTail.next.compareAndSet(null, newNode)) {
+                        // Insertion succeeded, try advancing tail
+                        tail.compareAndSet(curTail, newNode);
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+![15-1](https://github.com/ossaw/notes/blob/master/Pictures/jcip/java-concurrency-in-practice-15-1.jpg)
+
+![15-2](https://github.com/ossaw/notes/blob/master/Pictures/jcip/java-concurrency-in-practice-15-2.jpg)
+
+![15-3](https://github.com/ossaw/notes/blob/master/Pictures/jcip/java-concurrency-in-practice-15-3.jpg)
+
+#### 15.4.3 原子的域更新器
+
+# 待补充
+
+```java
+```
+
+#### 15.4.4 ABA问题
+
+1. ABA问题可由java.util.concurrent.atomic.AtomicStampedReference解决.
+
+### 小结
+
+1. 并发性能的主要提升来自于对阻塞算法的使用, JDK中java.util.concurrent包中的大多数类都采用非阻塞算法实现.
+
 ---
 
 ## 第16章 Java内存模型
@@ -791,7 +900,8 @@ public class PossibleReordering {
 ```
 
 经验证上述程序会打印出(0, 0), 如果不出现重排序的情况, 是不会出现这种结果, 程序运行时序可能如下:
-![Alt text](https://github.com/ossaw/notes/blob/master/Pictures/jcip/java-concurrency-in-practice-16-1.jpg)
+
+![16-1](https://github.com/ossaw/notes/blob/master/Pictures/jcip/java-concurrency-in-practice-16-1.jpg)
 
 #### 16.1.3 Java内存模型简介
 
