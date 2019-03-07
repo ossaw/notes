@@ -66,7 +66,7 @@ Redis加载损坏RDB文件时,拒绝启动, 可尝试redis-check-dump工具检�
 
 ### 5.2 AOF
 
-AOF（append only file）持久化：以独立日志的方式记录每次写命令，重启时再重新执行AOF文件中的命令达到恢复数据的目的。AOF的主要作用是解决了数据持久化的实时性，目前已经是Redis持久化的主流方式。理解掌握好AOF持久化机制对我们兼顾数据安全性和性能非常有帮助
+AOF（append only file）持久化：以独立日志的方式记录每次写命令，重启时再重新执行AOF文件中的命令达到恢复数据的目的。AOF的主要作用是解决了数据持久化的实时性
 
 #### 5.2.1 使用AOF
 
@@ -82,7 +82,7 @@ AOF的工作流程操作：命令写入（append）、文件同步（sync）、�
 
 4. 当Redis服务器重启时，可以加载AOF文件进行数据恢复。了解AOF工作流程之后，下面针对每个步骤做详细介绍。
 
-![5-2](https://github.com/ossaw/notes/blob/master/Pictures/redis/Redis-05-01.png)
+![5-2](https://github.com/ossaw/notes/blob/master/Pictures/redis/Redis-05-02.png)
 
 #### 5.2.2 命令写入
 
@@ -134,4 +134,4 @@ AOF重写过程可以手动触发和自动触发：
 
 重写流程
 
-![5-3](https://github.com/ossaw/notes/blob/master/Pictures/redis/Redis-05-01.png)
+![5-3](https://github.com/ossaw/notes/blob/master/Pictures/redis/Redis-05-03.png)
