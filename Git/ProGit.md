@@ -8,7 +8,7 @@
 git config --list
 
 检查Git的某一项配置
-git config <key>
+git config key
 eg: git config user.name
 
 配置用户名
@@ -181,3 +181,207 @@ git log --pretty=format 常用的选项
 --relative-date | 使用较短的相对时间显示（比如，“2 weeks ago”）。
 --graph | 显示 ASCII 图形表示的分支合并历史。
 --pretty | 使用其他格式显示历史提交信息。可用的选项包括 oneline，short，full，fuller 和 format（后跟指定格式）。
+
+### 撤消操作
+
+**git commit --amend**
+
+* 提交完了才发现漏掉了几个文件没有添加，或者提交信息写错了。 可以运行带有 --amend 选项的提交命令尝试重新提交
+
+#### 取消暂存的文件
+
+**git reset HEAD file**
+
+#### 撤消对文件的修改
+
+**git checkout -- file**
+
+* git checkout -- [file] 是一个危险的命令，这很重要。 你对那个文件做的任何修改都会消失 - 你只是拷贝了另一个文件来覆盖它。 除非你确实清楚不想要那个文件了，否则不要使用这个命令。
+
+### 远程仓库的使用
+
+#### 查看远程仓库
+
+**git remote**
+
+* 查看你已经配置的远程仓库服务器, origin - 这是 Git 给你克隆的仓库服务器的默认名字
+
+**git remote -v**
+
+* 显示需要读写远程仓库使用的 Git 保存的简写与其对应的 URL
+
+#### 添加远程仓库
+
+**git remote add shortname url**
+
+* eg: git remote add origin https://github.com/ossaw/git-practice.git
+
+#### 从远程仓库中抓取与拉取
+
+**git fetch [remote-name]**
+
+* 访问远程仓库，从中拉取所有你还没有的数据。 执行完成后，你将会拥有那个远程仓库中所有分支的引用，可以随时合并或查看。 必须注意 git fetch 命令会将数据拉取到你的本地仓库 - 它并不会自动合并或修改你当前的工作。 当准备好时你必须手动将其合并入你的工作。
+
+#### 推送到远程仓库
+
+**git push [remote-name] [branch-name]**
+
+* eg: git push origin master
+
+#### 查看远程仓库
+
+**git remote show [remote-name]**
+
+* eg: git remote show origin
+
+#### 远程仓库的移除与重命名
+
+**git remote rename oldname newname**
+
+* eg: git remote rename origin origin1 (将 origin 重命名为 origin1)
+
+**git remote rm name**
+
+* eg: git remote rm origin
+
+### 打标签
+
+#### 列出标签
+
+**git tag**
+
+* git tag -l 'v1.8.5*' (查找 v1.8.5系列的标签)
+
+#### 创建标签
+
+Git 使用两种主要类型的标签：轻量标签（lightweight）与附注标签（annotated）
+
+#### 附注标签
+
+**git tag -a tagname**
+
+* git tag -a v1.4 -m 'my version 1.4', -m 选项指定了一条将会存储在标签中的信息
+
+#### 轻量标签
+
+**git tag tagname**
+
+* git tag v1.5
+
+#### 后期打标签
+
+对过去的提交打标签
+
+**git tag -a v1.2 commitid
+
+#### 共享标签
+
+**git push origin tagname**
+
+* git push 命令并不会传送标签到远程仓库服务器上。 在创建完标签后你必须显式地推送标签到共享服务器上。 这个过程就像共享远程分支一样 - 你可以运行 git push origin [tagname]
+
+**git push origin --tags**
+
+* 一次性推送很多标签，也可以使用带有 --tags 选项的 git push 命令。 这将会把所有不在远程仓库服务器上的标签全部传送到那里。
+
+#### 删除标签
+
+**git tag -d tagname**
+
+* 上述命令并不会从任何远程仓库中移除这个标签
+
+**git push <remote> :refs/tags/tagname**
+
+* git push origin :refs/tags/v1.4 (删除远程标签)
+
+#### 检出标签
+
+略
+
+### Git别名
+
+**git config --global alias.aliascmd command**
+
+* eg: git config --global alias.co checkout
+
+## Git 分支
+
+---
+
+#### 分支创建
+
+**git branch branchname**
+
+* eg: git branch testing
+
+![两个指向相同提交历史的分支](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-02.png)
+![HEAD 指向当前所在的分支](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-03.png)
+
+#### 分支切换
+
+**git checkout branchname**
+
+* eg: git checkout testing
+
+![HEAD 指向当前所在的分支](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-04.png)
+
+再提交一次
+
+![HEAD 分支随着提交操作自动向前移动](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-05.png)
+
+切换回 master 分支
+
+![检出时 HEAD 随之移动](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-06.png)
+
+在master分支做些修改并提交
+
+![项目分叉历史](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-07.png)
+
+### 分支的新建与合并
+
+#### 新建分支
+
+新建一个分支并同时切换到那个分支
+
+**git checkout -b branchname**
+
+* eg: git checkout -b iss53
+
+![创建一个新分支指针](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-08.png)
+
+在iss53上做了修改并提交
+
+![iss53 分支随着工作的进展向前推进](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-09.png)
+
+有个紧急问题等待你来解决。 有了 Git 的帮助，你不必把这个紧急问题和 iss53 的修改混在一起，你也不需要花大力气来还原关于 53# 问题的修改，然后再添加关于这个紧急问题的修改，最后将这个修改提交到线上分支。 你所要做的仅仅是切换回 master 分支, 但是，在你这么做之前，要留意你的工作目录和暂存区里那些还没有被提交的修改，它可能会和你即将检出的分支产生冲突从而阻止 Git 切换到该分支。 最好的方法是，在你切换分支之前，保持好一个干净的状态。 有一些方法可以绕过这个问题（即，保存进度（stashing） 和 修补提交（commit amending）），我们会在储藏与清理 中看到关于这两个命令的介绍。 现在，我们假设你已经把你的修改全部提交了，这时你可以切换回master 分支了
+
+![基于 master 分支的紧急问题分支 hotfix branch](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-10.png)
+
+你可以运行你的测试，确保你的修改是正确的，然后将其合并回你的 master 分支来部署到线上。 你可以使用 git merge 命令来达到上述目的
+
+
+![master 被快进到 hotfix](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-11.png)
+
+这个紧急问题的解决方案发布之后，你准备回到被打断之前时的工作中。 然而，你应该先删除 hotfix 分支，因为你已经不再需要它了 —— master 分支已经指向了同一个位置。 你可以使用带 -d 选项的 git branch 命令来删除分支
+
+![继续在 iss53 分支上的工作](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-12.png)
+
+你在 hotfix 分支上所做的工作并没有包含到 iss53 分支中。 如果你需要拉取 hotfix 所做的修改，你可以使用 git merge master 命令将 master 分支合并入 iss53 分支，或者你也可以等到 iss53 分支完成其使命，再将其合并回 master 分支。
+
+#### 分支的合并
+
+假设你已经修正了 #53 问题，并且打算将你的工作合并入 master 分支。master 分支所在提交并不是 iss53 分支所在提交的直接祖先，Git 不得不做一些额外的工作。 出现这种情况的时候，Git 会使用两个分支的末端所指的快照（C4 和 C5）以及这两个分支的工作祖先（C2），做一个简单的三方合并。
+
+![一次典型合并中所用到的三个快照](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-13.png)
+
+和之前将分支指针向前推进所不同的是，Git 将此次三方合并的结果做了一个新的快照并且自动创建一个新的提交指向它。 这个被称作一次合并提交，它的特别之处在于他有不止一个父提交。
+
+![一个合并提交](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-13.png)
+
+删除iss53分支
+
+git branch -d iss53
+
+#### 遇到冲突时的分支合并
+
+在你解决了所有文件里的冲突之后，对每个文件使用 git add 命令来将其标记为冲突已解决。 一旦暂存这些原本有冲突的文件，Git 就会将它们标记为冲突已解决。如果你对结果感到满意，并且确定之前有冲突的的文件都已经暂存了，这时你可以输入 git commit 来完成合并提交。
