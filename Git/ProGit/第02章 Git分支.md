@@ -53,7 +53,6 @@
 
 你可以运行你的测试, 确保你的修改是正确的, 然后将其合并回你的 master 分支来部署到线上. 你可以使用 git merge 命令来达到上述目的
 
-
 ![master 被快进到 hotfix](https://github.com/ossaw/notes/blob/master/Pictures/git/pro-git-11.png)
 
 这个紧急问题的解决方案发布之后, 你准备回到被打断之前时的工作中. 然而, 你应该先删除 hotfix 分支, 因为你已经不再需要它了 —— master 分支已经指向了同一个位置. 你可以使用带 -d 选项的 git branch 命令来删除分支
@@ -79,3 +78,31 @@ git branch -d iss53
 #### 遇到冲突时的分支合并
 
 在你解决了所有文件里的冲突之后, 对每个文件使用 git add 命令来将其标记为冲突已解决. 一旦暂存这些原本有冲突的文件, Git 就会将它们标记为冲突已解决.如果你对结果感到满意, 并且确定之前有冲突的的文件都已经暂存了, 这时你可以输入 git commit 来完成合并提交.
+
+#### 分支管理
+
+**git branch**
+
+* 列出本地分支, *标记表示当前所在分支
+
+**git branch -v**
+
+* 查看每一个分支的最后一次提交
+
+**git branch -a**
+
+* 列出所有分支, 包括远程分支
+
+**git branch --no-merged**
+
+* 查看所有包含未合并工作的分支
+
+**git branch -d branchname**
+
+删除分支
+
+**git branch -D branchname**
+
+强制删除分支
+
+

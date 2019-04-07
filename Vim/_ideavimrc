@@ -1,0 +1,26 @@
+set visualbell
+set nu
+set surround
+
+" Quit visual mode
+vnoremap v <Esc>
+
+" Redo
+nnoremap U <C-r>
+
+" Yank to the end of line
+nnoremap Y y$
+
+" Tab operation
+nnoremap tn gt
+nnoremap tp gT
+
+" 设置debug为 zd
+:nnoremap zd :action DebugClass<CR>
+" 设置run 为 zr
+:nnoremap zr :action RunClass<CR>
+
+" built in search looks better
+nnoremap / :action Find<CR>
+" but preserve ideavim search
+nnoremap <Space>/ /

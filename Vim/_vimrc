@@ -1,0 +1,231 @@
+set encoding=utf-8
+set nocompatible              " be iMproved, required
+let $LANG = 'en'  "set message language
+set langmenu=en   "set menu's language of gvim. no spaces beside '='
+
+filetype on    " required
+
+" set the runtime path to include Vundle and initialize
+set rtp+=$VIM/vimfiles/bundle/Vundle.vim/
+call vundle#begin('$VIM/vimfiles/bundle/')
+" alternatively, pass a path where Vundle should install plugins
+"call vundle#begin('~/some/path/here')
+
+" let Vundle manage Vundle, required
+Plugin 'VundleVim/Vundle.vim'
+
+" plugin on GitHub repo
+Bundle 'groenewege/vim-less'
+Bundle 'kien/ctrlp.vim'
+Bundle 'yegappan/mru'
+Bundle 'scrooloose/nerdcommenter'
+Bundle 'Lokaltog/vim-easymotion'
+Bundle 'godlygeek/tabular'
+Bundle 'plasticboy/vim-markdown'
+Bundle 'iamcco/markdown-preview.vim'
+" Bundle 'joker1007/vim-markdown-quote-syntax'
+Plugin 'mzlogin/vim-markdown-toc'
+
+Plugin 'vim-airline/vim-airline'
+Plugin 'vim-airline/vim-airline-themes'
+
+" All of your Plugins must be added before the following line
+call vundle#end()            " required
+filetype plugin indent on    " required
+" To ignore plugin indent changes, instead use:
+"filetype plugin on
+"
+" Brief help
+" :PluginList       - lists configured plugins
+" :PluginInstall    - installs plugins; append `!` to update or just :PluginUpdate
+" :PluginSearch foo - searches for foo; append `!` to refresh local cache
+" :PluginClean      - confirms removal of unused plugins; append `!` to auto-approve removal
+"
+" see :h vundle for more details or wiki for FAQ
+" Put your non-Plugin stuff after this line
+
+set number
+set relativenumber
+
+set smartindent
+set autoindent
+set shiftwidth=4
+set tabstop=4
+set softtabstop=4
+"set expandtab
+
+set backspace=indent,eol,start
+
+set scrolloff=3
+
+set hlsearch
+set display=lastline
+
+set cursorcolumn
+set cursorline
+set guifont=Courier_new:h14:b:cDEFAULT
+colorscheme desert
+
+"highlight CursorLine   cterm=NONE ctermbg=black ctermfg=green guibg=NONE guifg=NONE
+"highlight CursorColumn cterm=NONE ctermbg=black ctermfg=green guibg=NONE guifg=NONE
+
+set laststatus=2
+set showmatch
+set mouse=a
+set autoread
+set ruler
+set foldenable
+"set fdm=syntax
+autocmd InsertEnter * se cul
+syntax on
+
+set nobackup       " no backup files
+set noswapfile     " no swap files
+set nowritebackup  " only in case you don't want a backup file while editing
+set noundofile     " no undo files
+
+set vb t_vb=
+au GuiEnter * set t_vb=
+autocmd GUIEnter * simalt ~x
+
+set guioptions-=m  "remove menu bar
+set guioptions-=T  "remove toolbar
+"set guioptions-=r  "remove right-hand scroll bar
+set guioptions-=L  "remove left-hand scroll bar
+
+set ignorecase
+set nofoldenable
+
+"au BufNewFile,BufRead *.less set filetype=css
+"au BufNewFile,BufRead *.phtml set filetype=php
+"au BufRead,BufNewFile *.js set ft=javascript.jquery
+"
+"let g:neocomplcache_enable_at_startup = 1
+
+nmap mm :%s/\r//g<cr>
+
+"设置ctrlp的快捷方式 ctrp
+let g:ctrlp_map = '<c-p>'
+let g:ctrlp_cmd = 'CtrlP'
+"设置ctrlp的窗口位置
+let g:ctrlp_match_window = 'bottom,order:btt,min:1,max:10,results:20'
+"在vim 命令下cd 切换目录,可以实现ctrlp 切换目录,下面两条命令
+let g:NERDTreeChDirMode = 2
+let g:ctrlp_working_path_mode = 'rw'
+
+"NERDTree
+let NERDTreeWinPos='left'
+let NERDTreeWinSize=30
+" map <Space> :NERDTreeToggle<CR>
+map <Space>a :MRU<CR>
+
+let MRU_File='D:\gVim\_vim_mru_files'
+let MRU_Max_Entries=50
+
+let g:indentLine_noConcealCursor="nc"
+
+if has('win32')
+" Use <C-X><C-C><C-V> {{{
+vnoremap <C-X> "+x
+vnoremap <C-C> "+y
+map <C-V> "+gP
+cmap <C-V> <C-R>+
+exe 'inoremap <script> <C-V>' paste#paste_cmd['i']
+exe 'vnoremap <script> <C-V>' paste#paste_cmd['v']
+noremap <C-Q> <C-V>
+" }}}
+behave mswin
+" Solution for diff {{{
+set diffexpr=MyDiff()
+function MyDiff()
+" 默认_vimrc中的MyDiff函数定义，省略。
+endfunction
+" }}}
+endif
+
+" set Bundle 'scrooloose/nerdcommenter'
+let g:NERDSpaceDelims=1
+" let mapleader=","
+let mapleader="\<Space>"
+
+set laststatus=2  "永远显示状态栏
+set t_Co=256      "在windows中用xshell连接打开vim可以显示色彩
+
+let g:airline_theme='bubblegum'
+
+function! Fcitx2en()
+    let input_status = system('fcitx-remote')
+    if input_status == 2
+        let b:inputtoggle = 1
+        call system('fcitx-remote -c')
+    endif
+endfunction
+function! Fcitx2zh()
+    try
+	if b:inputtoggle == 1
+	    call system('fcitx-remote -o')
+	    let b:inputtoggle = 0
+	endif
+    catch /inputtoggle/
+        let b:inputtoggle = 0
+    endtry
+endfunction
+" Autocmds:
+au InsertLeave * call Fcitx2en()
+au InsertEnter * call Fcitx2zh()
+
+" set clipboard=unnamed
+" set mouse=nicr
+
+let g:mkdp_path_to_chrome = ""
+" path to the chrome or the command to open chrome(or other modern browsers)
+" if set, g:mkdp_browserfunc would be ignored
+
+let g:mkdp_browserfunc = 'MKDP_browserfunc_default'
+" callback vim function to open browser, the only param is the url to open
+
+let g:mkdp_auto_start = 0
+" set to 1, the vim will open the preview window once enter the markdown
+" buffer
+
+let g:mkdp_auto_open = 0
+" set to 1, the vim will auto open preview window when you edit the
+" markdown file
+
+let g:mkdp_auto_close = 1
+" set to 1, the vim will auto close current preview window when change
+" from markdown buffer to another buffer
+
+let g:mkdp_refresh_slow = 0
+" set to 1, the vim will just refresh markdown when save the buffer or
+" leave from insert mode, default 0 is auto refresh markdown as you edit or
+" move the cursor
+
+let g:mkdp_command_for_global = 0
+" set to 1, the MarkdownPreview command can be use for all files,
+" by default it just can be use in markdown file
+
+
+let g:EasyMotion_smartcase = 1
+"let g:EasyMotion_startofline = 0 " keep cursor colum when JK motion
+" map <leader><leader>h <Plug>(easymotion-linebackward)
+" map <leader><Leader>j <Plug>(easymotion-j)
+" map <leader><Leader>k <Plug>(easymotion-k)
+" map <leader><leader>l <Plug>(easymotion-lineforward)
+map <leader>h <Plug>(easymotion-linebackward)
+map <Leader>j <Plug>(easymotion-j)
+map <Leader>k <Plug>(easymotion-k)
+map <leader>l <Plug>(easymotion-lineforward)
+map  <Leader>w <Plug>(easymotion-bd-w)
+nmap <Leader>w <Plug>(easymotion-overwin-w)
+" 重复上一次操作, 类似repeat插件, 很强大
+map <Leader>. <Plug>(easymotion-repeat)
+
+let g:vim_markdown_folding_disabled = 1
+let g:vim_markdown_frontmatter=1
+
+let g:markdown_quote_syntax_filetypes = {
+        \ "java" : {
+        \   "start" : "java",
+        \},
+  \}
