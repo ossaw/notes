@@ -1,0 +1,26 @@
+# 代码的坏味道
+
+坏味道 | 常用重构
+:----: | :----: 
+Alternative Classes with Different Interfaces(异曲同工的类), p85 | Rename Method( 273) <br> Move Method(142)
+Comments (过多的注释), p87 | Extract Method(110) <br> Introduce Assertion(267) 
+Data Class (纯稚的数据类), p86 | Move Method(142) <br> Encapsulate Field(206) <br> Encapsulate Collection(208)
+Data Clumps (数据泥团), p81 | Extract Class(149) <br> Introduce Parameter Object(295) <br> Preserve Whole Object(288)
+Divergent Change (发散式变化), p79 | Extract Class(149)
+Duplicated Code (重复代码), p76 | Extract Method(110) <br> Extract Class(149) <br> Pull Up Method(322) <br> Form Template Method(345)
+Feature Envy (依恋情结), p80 | Move Method(142) <br> Move Field(146) <br> Extract Method(110) 
+Inappropriate Intimacy (钾昵关系), p85 | Move Method(142) <br> Move Field(146) <br> Change Bidirect Association to Unidirectional(200) <br> Replace Inheritance with Delegation(352) <br> Hide Delegate(157) 
+Incomplete Library (不完美的库类), p86 | Introduce Foreign Method(162) <br> Introduce Local Extension(164) 
+Large Class (过大的类), p78 | Extract Class(149) <br> Extract Subclass(330) <br> Extract Interface(341) <br> Replace Data Value with Object(175)
+Lazy Class (冗赘类), p83 | Inline Class(154) <br> Collapse Hierarch(344) 
+Long Method (过长函数), p76 | Extract Method(110) <br> Replace Temp With Query(120) <br> Replace Method with Method Object(135) <br> Decompose Conditiona(238)
+Long Parameter List (过长参数列), p78 | Replace Parameter with Method(292) <br> Introduce Parameter Object(295) <br> Preserve Whole Object(288)
+Message Chains (过度耦合的消息链), p84 | Hide Delegate(157)
+Middle Man (中间人), p85 | Remove Middle Man(160) <br> Inline Method(117) <br> Replace Delegation with Inheritance(355)
+Parallel Inheritance Hierarchies (平行的继承体系), p83 | Move Method(142) <br> Move Field(146)
+Primitive Obsession (基本类型偏执), p81 | Replace Data Value with Object(175) <br> Extract Class(149) <br> Introduce Parameter Object(295) <br> Replace Array with Object(186) <br> Replace Type Code with Class(218) <br> Replace Type Code with Subclasses(223) <br> Replace Type Code with State/Strategy(227)
+Refused Bequest (被拒绝的遗赠), p87 | Replace Inheritance with Delegation(352)
+Shotgun Surge (霰弹式修改), p80 | Move Method( 142) <br> Move Field(146) <br> Inline Class(154)
+Speculative Generality (夸夸其谈未来性), p83 | Collapse Hierarchy(344) <br> Inline Class(54) <br> Remove Parameter(277) <br> Rename Method(273)
+Switch Statements (switch惊现身), p82 | Replace Conditional with Polymorphism(255) <br> Replace Type Code with Subclasses(223) <br> Replace Type Code with State／Strategy(227) <br> Replace Parameter with Explicit Methods(285) <br> Introduce Null Objec(260)
+Temporary Field (令人迷感的暂时字段), p84 | Extract Class(149) <br> Introduce Null Objec(260)
