@@ -1,0 +1,29 @@
+[user]
+	name = ossaw
+	email = jianghao7625@gmail.com
+[alias]
+	st = status
+	ck = checkout
+	cm = commit
+	br = branch
+	pl = pull
+	ps = push
+	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+[http]
+	postBuffer = 1048576000
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[winUpdater]
+	recentlySeenVersion = 2.21.0.windows.1
+[core]
+	editor = vim
+	quotepath = false
+	autocrlf = false
+[i18n]
+	commitencoding = utf-8
+	logoutputencoding = utf-8
+[gui]
+	encoding = utf-8
