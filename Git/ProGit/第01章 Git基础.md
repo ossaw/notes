@@ -303,3 +303,7 @@ Git 使用两种主要类型的标签：轻量标签(lightweight)与附注标签
 **git config --global alias.aliascmd command**
 
 * eg: git config --global alias.co checkout
+
+### 修改远程仓库地址
+
+**git remote set-url origin [url]**
